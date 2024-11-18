@@ -1,0 +1,148 @@
+---
+title: "Stat 4620 Final"
+author: "Joanna Giju (Giju.1)"
+date: "2024-11-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(alr4)
+library(tidyverse)
+library(broom)
+library(GGally)
+library(patchwork)
+library(ggplot2)
+library(ISLR)
+library(corrplot)
+library(MASS)
+library(class)
+library(boot)
+library(pls) 
+library(reshape2) 
+```
+
+
+```{r}
+#import data
+trainData <- read.csv("/Users/joannagiju/Downloads/train.csv", header = TRUE)
+testData <- read.csv("/Users/joannagiju/Downloads/test.csv", header = TRUE)
+```
+
+### Part I: Exploratory Data Analysis
+
+```{r}
+summary(trainData) 
+```
+
+##### Are there any problems with the data?
+
+```{r}
+#Outliers
+#boxplot(trainData$variable)
+
+#Outliers using zscore ///but need to pick individual variables
+#z_scores <- scale(data$variable)
+#outliers <- which(abs(z_scores) > 3)
+
+#Check structure 
+str(trainData) 
+
+#Check duplicates
+duplicated_rows <- trainData[duplicated(trainData), ]
+nrow(duplicated_rows)
+
+#Check for negatives ///but need to pick individual variables
+#subset(data, variable < 0)
+
+#Check target response variable
+summary(trainData$SalePrice)
+hist(trainData$SalePrice)
+```
+
+#####  What kind of variables do you have?
+
+```{r}
+#Check each variable type
+head(trainData) 
+sapply(trainData, class)
+```
+##### Is there any missing data?
+
+```{r}
+#Check for missing values 
+colSums(is.na(trainData))
+sum(is.na(data))
+```
+
+##### Does there appear to be potentially problematic collinearity among the predictor variables?
+
+```{r}
+#Check multicollinearity - too many variables try numeric vs categorical 
+#numerical 
+cor_vals <- cor(trainData[, sapply(trainData, is.numeric)], trainData$SalePrice, use = "complete.obs")
+cor_vals <- sort(abs(cor_vals), decreasing = TRUE)
+cor_vals
+
+#plot numerical variables vs target
+num_vars <- names(trainData)[sapply(trainData, is.numeric)]  
+numeric_data <- trainData[, c(num_vars, "SalePrice")]  
+
+numeric_data_long <- melt(numeric_data, id.vars = "SalePrice")  
+
+ggplot(numeric_data_long, aes(x = value, y = SalePrice)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~variable, scales = "free_x") + 
+  theme_minimal() +
+  labs(title = "Numerical Predictors vs SalePrice",
+       x = "Predictor ",
+       y = "SalePrice")
+```
+
+```{r}
+#categorical
+chi_results <- lapply(trainData[, sapply(trainData, is.factor)], function(x) chisq.test(table(x, trainData$SalePrice))$p.value)
+
+#plot categorial vs target
+cat_vars <- names(trainData)[sapply(trainData, is.factor)]  
+cat_data <- trainData[, c(num_vars, "SalePrice")]  
+
+cat_data_long <- melt(cat_data, id.vars = "SalePrice")  
+
+ggplot(cat_data_long, aes(x = value, y = SalePrice)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~variable, scales = "free_x") + 
+  theme_minimal() +
+  labs(title = "Categorical Predictors vs SalePrice",
+       x = "Predictor",
+       y = "SalePrice")
+```
+
+##### Can you detect early signs of what variables are likely important in predicting the response?
+
+```{r}
+ggpairs(trainData)
+#model <- lm(SalePrice ~ ., data = trainData) error??
+#summary(model)
+```
+
+##### What are the key figures or numerical summaries that describe the most important aspects of the data?
+
+##### Does your EDA suggest to you what modeling approaches you should aim to try?
+Some sort of model that does feature selection- LASSO, PCR, PLS- We will use PLS because we are interested in the relationship between are predictor variables and the target response so PLS will best fit this analysis. 
+
+### Part II: Model Analysis
+
+#### Analysis (Only training):
+
+#####  1. Provide motivation for the model (or models) you investigated (e.g., model building/selection).
+
+##### 2. Provide a clear, technically accurate, mathematical description of the model (or models) you used.
+
+##### 3. Describe the modeling assumptions and show how you checked model assumptions using plots, etc., when/where appropriate. If the model you decide to use does not fully satisfy modeling assumptions, be clear that this is the case and provide an explanation for why you decided to use the chosen model nonetheless.
+
+##### 4. Perform an appriopriate model validation.
+
+#### Model Results:
+
+#### Summarize your model’s predictive performance using the test.csv testing dataset, and provide as much interpretation about your final model to the reader as possible. 
